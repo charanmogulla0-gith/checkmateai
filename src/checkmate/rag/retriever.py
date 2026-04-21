@@ -6,6 +6,7 @@ import re
 
 from unidiff import PatchSet
 
+from checkmate.observability import observe, update_span
 from checkmate.rag.embedder import embed_one
 from checkmate.rag.store import search
 
@@ -63,15 +64,27 @@ def _format_context(hits: list[dict]) -> str:
     return "\n".join(out_parts)
 
 
+@observe(as_type="retriever", name="repo-rag")
 def retrieve_context(repo_full_name: str, diff: str, top_k: int = DEFAULT_TOP_K) -> str:
     """Return a formatted context block for the PR, or '' if nothing relevant."""
     query, changed = _query_from_diff(diff)
     if not query.strip():
+        update_span(metadata={"repo": repo_full_name, "hits": 0, "skipped": "empty-query"})
         return ""
     vec = embed_one(query)
     hits = search(repo_full_name, vec, top_k=top_k, exclude_paths=changed)
+    top_score = hits[0]["score"] if hits else 0.0
+    update_span(
+        output=[{"path": h["path"], "symbol": h.get("symbol", ""), "score": h["score"]} for h in hits],
+        metadata={
+            "repo": repo_full_name,
+            "hits": len(hits),
+            "top_score": top_score,
+            "excluded_paths": len(changed),
+        },
+    )
     if not hits:
         return ""
     logger.info("retrieved %d chunks for %s (top score=%.3f)",
-                len(hits), repo_full_name, hits[0]["score"])
+                len(hits), repo_full_name, top_score)
     return _format_context(hits)

@@ -10,6 +10,8 @@ import logging
 from checkmate.diff_utils import commentable_lines, truncate_diff
 from checkmate.github_auth import installation_token
 from checkmate.github_client import GitHubClient
+from checkmate.observability import flush as lf_flush
+from checkmate.observability import observe, update_trace
 from checkmate.rag import ensure_indexed, retrieve_context
 from checkmate.review import review_diff
 from checkmate.schemas import Finding, Review, ReviewJob
@@ -45,7 +47,12 @@ def _finding_to_comment(f: Finding) -> dict:
     return {"path": f.file, "line": f.line, "body": body, "side": "RIGHT"}
 
 
+@observe(name="pr-review")
 async def _run_review(job: ReviewJob) -> dict:
+    update_trace(
+        name=f"{job.repo_full_name}#{job.pr_number}",
+        metadata={"repo": job.repo_full_name, "pr_number": job.pr_number, "head_sha": job.head_sha},
+    )
     token = await installation_token(job.installation_id)
     gh = GitHubClient(token)
 
@@ -82,12 +89,14 @@ async def _run_review(job: ReviewJob) -> dict:
         comments=[_finding_to_comment(f) for f in kept],
     )
 
-    return {
+    result = {
         "status": "posted",
         "findings_total": len(review.findings),
         "findings_posted": len(kept),
         "findings_dropped": dropped,
     }
+    update_trace(output=result)
+    return result
 
 
 def review_pr(job_data: dict) -> dict:
@@ -101,3 +110,5 @@ def review_pr(job_data: dict) -> dict:
     except Exception:
         logger.exception("review failed for %s#%s", job.repo_full_name, job.pr_number)
         raise
+    finally:
+        lf_flush()
