@@ -38,11 +38,18 @@ services:
       POSTGRES_DB: langfuse
     volumes:
       - langfuse_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   langfuse:
     image: langfuse/langfuse:2
     depends_on:
-      - langfuse-db
+      langfuse-db:
+        condition: service_healthy
+    restart: on-failure
     ports:
       - "3000:3000"
     environment:
