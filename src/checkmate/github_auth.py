@@ -20,7 +20,7 @@ def app_jwt() -> str:
     Valid for 10 minutes per GitHub's max.
     """
     now = int(time.time())
-    payload = {"iat": now - 60, "exp": now + 9 * 60, "iss": settings.github_app_id}
+    payload = {"iat": now - 60, "exp": now + 9 * 60, "iss": str(settings.github_app_id)}
     return jwt.encode(payload, _private_key(), algorithm="RS256")
 
 
