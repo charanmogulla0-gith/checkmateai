@@ -10,6 +10,7 @@ import logging
 from checkmate.diff_utils import commentable_lines, truncate_diff
 from checkmate.github_auth import installation_token
 from checkmate.github_client import GitHubClient
+from checkmate.rag import ensure_indexed, retrieve_context
 from checkmate.review import review_diff
 from checkmate.schemas import Finding, Review, ReviewJob
 
@@ -52,12 +53,21 @@ async def _run_review(job: ReviewJob) -> dict:
     diff = await gh.get_pr_diff(job.repo_full_name, job.pr_number)
     diff = truncate_diff(diff)
 
+    # RAG: index the repo on first encounter, then retrieve diff-relevant chunks.
+    try:
+        await ensure_indexed(job.repo_full_name, job.base_sha, token)
+        repo_context = retrieve_context(job.repo_full_name, diff)
+    except Exception:
+        logger.exception("rag step failed — proceeding without repo context")
+        repo_context = ""
+
     review = review_diff(
         repo=job.repo_full_name,
         pr_number=job.pr_number,
         pr_title=pr["title"],
         pr_body=pr.get("body") or "",
         diff=diff,
+        repo_context=repo_context,
     )
 
     valid = commentable_lines(diff)
