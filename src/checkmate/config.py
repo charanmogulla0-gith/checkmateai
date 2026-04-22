@@ -8,7 +8,10 @@ class Settings(BaseSettings):
     claude_model: str = "claude-sonnet-4-6"
 
     github_app_id: int
-    github_app_private_key_path: str
+    # Provide EITHER the raw PEM (for production/Fly) OR a path to a PEM file (for local dev).
+    # The env-var form wins when both are set.
+    github_app_private_key: str = ""
+    github_app_private_key_path: str = ""
     github_webhook_secret: str
 
     langfuse_host: str = "http://localhost:3000"

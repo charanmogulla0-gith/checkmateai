@@ -10,7 +10,17 @@ from checkmate.config import settings
 
 @lru_cache(maxsize=1)
 def _private_key() -> str:
-    return Path(settings.github_app_private_key_path).read_text()
+    # Prefer the raw PEM from env (production/Fly) over a file path (local dev).
+    # Escaped newlines are common when pasting PEMs into env managers.
+    raw = settings.github_app_private_key
+    if raw:
+        return raw.replace("\\n", "\n")
+    if settings.github_app_private_key_path:
+        return Path(settings.github_app_private_key_path).read_text()
+    raise RuntimeError(
+        "GitHub App private key missing — set GITHUB_APP_PRIVATE_KEY or "
+        "GITHUB_APP_PRIVATE_KEY_PATH"
+    )
 
 
 def app_jwt() -> str:
