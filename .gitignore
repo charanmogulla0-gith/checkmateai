@@ -13,6 +13,7 @@ env/
 # Env / secrets
 .env
 .env.local
+.env.fly
 *.pem
 *.key
 secrets/*
