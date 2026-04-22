@@ -36,7 +36,9 @@ primary_region = 'iad'
   memory = '1gb'
   processes = ['app']
 
+# Worker needs 2gb: BGE model + torch + first-time repo indexing (chunking + embedding
+# the whole repo) peaks well above 1gb and gets OOM-killed at 1gb during initial index.
 [[vm]]
   size = 'shared-cpu-1x'
-  memory = '1gb'
+  memory = '2gb'
   processes = ['worker']
