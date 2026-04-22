@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 
 @lru_cache(maxsize=1)
 def client() -> QdrantClient:
-    return QdrantClient(url=settings.qdrant_url)
+    # api_key is required for Qdrant Cloud; empty is fine for a local container.
+    return QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key or None)
 
 
 def collection_name(repo_full_name: str) -> str:
