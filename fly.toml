@@ -1,38 +1,40 @@
-# Fly.io config for Checkmate — API + RQ worker running the same image.
-# Docs: https://fly.io/docs/reference/configuration/
-app = "checkmate-ai"
-primary_region = "iad"
+# fly.toml app configuration file generated for checkmate-ai on 2026-04-22T14:38:32-05:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'checkmate-ai'
+primary_region = 'iad'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [processes]
-  app = "uvicorn checkmate.main:app --host 0.0.0.0 --port 8000"
-  worker = "rq worker reviews --url $REDIS_URL"
+  app = 'uvicorn checkmate.main:app --host 0.0.0.0 --port 8000'
+  # Wrap in sh -c so $REDIS_URL expands — Fly runs commands directly, not via shell.
+  worker = 'sh -c "rq worker reviews --url $REDIS_URL"'
 
 [http_service]
   internal_port = 8000
   force_https = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
-  processes = ["app"]
+  processes = ['app']
 
   [[http_service.checks]]
-    interval = "30s"
-    timeout = "5s"
-    grace_period = "10s"
-    method = "GET"
-    path = "/health"
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health'
 
-# API machine — small, can scale to zero between webhooks.
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "1gb"
-  processes = ["app"]
+  size = 'shared-cpu-1x'
+  memory = '1gb'
+  processes = ['app']
 
-# Worker machine — stays running to drain the RQ queue. 1gb for sentence-transformers.
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "1gb"
-  processes = ["worker"]
+  size = 'shared-cpu-1x'
+  memory = '1gb'
+  processes = ['worker']
