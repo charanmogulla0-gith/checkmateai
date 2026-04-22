@@ -56,7 +56,9 @@ async def github_webhook(
     # Import here to avoid circular imports at module load
     from checkmate.worker import review_pr
 
-    job = _queue.enqueue(review_pr, job_data, job_timeout=300)
+    # 15-min timeout to accommodate first-time repo indexing on CPU (BGE embeddings
+    # of a full repo can take 3-5 min). Subsequent PRs on the same repo skip indexing.
+    job = _queue.enqueue(review_pr, job_data, job_timeout=900)
     logger.info("enqueued review job %s for %s#%s", job.id, job_data["repo_full_name"], job_data["pr_number"])
 
     return {"status": "queued", "job_id": job.id}
