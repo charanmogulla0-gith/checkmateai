@@ -47,3 +47,4 @@ logs/
 data/
 qdrant_storage/
 langfuse_data/
+evals/results/
